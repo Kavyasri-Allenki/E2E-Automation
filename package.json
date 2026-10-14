@@ -1,0 +1,15 @@
+{
+  "name": "whitecoats-appointment-automation",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Automation scenarios for the WhiteCoats appointments portal at myappointments.whitecoats.com",
+  "scripts": {
+    "test": "playwright test",
+    "test:public": "playwright test tests/public",
+    "test:list": "playwright test --list",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.1"
+  }
+}
