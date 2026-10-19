@@ -71,11 +71,13 @@ WC_PATIENT_OTP='sms-code' \
 
 `tests/auth/staff-emr.spec.ts` signs in on the EMR host, walks every staff screen, checks the fields on those screens, then registers one test patient, books Dr. Kavyaa Allenki (the Kavya doctor on the Sunshine directory), reschedules that visit, creates an invoice, and records a cash payment. `npm test` skips it unless `WC_STAFF_PASSWORD` is set. Point `WC_BASE_URL` at the host you are allowed to change.
 
+The spec records video, uses a 1280×800 window, and slows each action by 250 ms. `--headed` needs a display.
+
 ```bash
 WC_BASE_URL=https://emr.whitecoats.com \
 WC_STAFF_EMAIL='staff@example.com' \
 WC_STAFF_PASSWORD='your-password' \
-  npx playwright test tests/auth/staff-emr.spec.ts --retries=0
+  npx playwright test tests/auth/staff-emr.spec.ts --headed --retries=0 --workers=1
 ```
 
 ## Sandbox scenarios

@@ -1,5 +1,13 @@
+import { mkdir } from 'node:fs/promises';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { STAFF_EMAIL, STAFF_HOSPITAL, signInStaff, signOutStaff } from './staff-session';
+
+const recordingDir = 'test-results/staff-emr';
+
+async function capture(page: Page, name: string) {
+  await mkdir(recordingDir, { recursive: true });
+  await page.screenshot({ path: `${recordingDir}/${name}.png` });
+}
 
 const password = process.env.WC_STAFF_PASSWORD;
 
@@ -45,19 +53,66 @@ async function pickOption(page: Page, combo: Locator, option: string | RegExp) {
   }).toPass({ timeout: 15_000 });
 }
 
+async function showStep(page: Page, title: string) {
+  const label = `Staff scenario: ${title}`;
+  await page
+    .evaluate((text) => {
+      sessionStorage.setItem('wc-staff-step', text);
+    }, label)
+    .catch(() => undefined);
+  await page.waitForTimeout(500);
+}
+
+test.use({
+  video: 'on',
+  viewport: { width: 1280, height: 800 },
+  launchOptions: { slowMo: 250 },
+});
+
 test.describe('Staff EMR on emr.whitecoats.com', () => {
   test.describe.configure({ mode: 'serial' });
   test.skip(!password, 'Set WC_STAFF_PASSWORD to run the staff EMR suite.');
 
+  test.beforeEach(async ({ page }) => {
+    await page.addLocatorHandler(page.getByRole('heading', { name: 'Enable Notifications' }), async () => {
+      await page.getByRole('button', { name: 'Not Now' }).click();
+    });
+    await page.addInitScript(() => {
+      const id = 'wc-staff-step';
+      const paint = () => {
+        try {
+          const text = sessionStorage.getItem(id);
+          if (!text || !document.documentElement) return;
+          let bar = document.getElementById(id);
+          if (!bar) {
+            bar = document.createElement('div');
+            bar.id = id;
+            bar.setAttribute(
+              'style',
+              'position:fixed;top:0;left:0;right:0;z-index:2147483647;background:#111827;color:#f8fafc;font:600 15px/1.35 ui-sans-serif,system-ui,sans-serif;padding:8px 16px;pointer-events:none;text-align:left;',
+            );
+            document.documentElement.appendChild(bar);
+          }
+          if (bar.textContent !== text) bar.textContent = text;
+        } catch {
+          /* sessionStorage is unavailable on some interim documents */
+        }
+      };
+      window.setInterval(paint, 300);
+    });
+  });
+
   test('WC-STF-AUTH staff sign-in fields reject bad input and then open the dashboard', async ({ page }) => {
-    test.setTimeout(90_000);
+    test.setTimeout(180_000);
     await page.goto('/login/staff');
+    await showStep(page, 'Reject a hospital search that matches nothing');
     await expect(page.getByRole('heading', { name: 'Find your hospital' })).toBeVisible();
     const search = page.getByPlaceholder("Start typing your hospital's name");
     await search.fill('zzzz-not-a-real-hospital');
     await expect(page.getByText('No hospitals found matching "zzzz-not-a-real-hospital".')).toBeVisible();
     await expect(page.getByPlaceholder('Enter your email')).toHaveCount(0);
 
+    await showStep(page, 'Check the staff email and password fields');
     await search.fill(STAFF_HOSPITAL);
     await page.getByRole('button', { name: new RegExp(STAFF_HOSPITAL) }).first().click();
     const email = page.getByPlaceholder('Enter your email');
@@ -82,16 +137,21 @@ test.describe('Staff EMR on emr.whitecoats.com', () => {
     await page.getByRole('button', { name: 'Hide password' }).click();
     await expect(secret).toHaveAttribute('type', 'password');
 
+    await showStep(page, 'Reject a wrong password');
     await email.fill(STAFF_EMAIL);
     await secret.fill('definitely-not-the-password');
     await page.getByRole('button', { name: 'Sign In' }).click();
     await expect(page.locator('.login-error')).toContainText(/invalid credentials/i);
     await expect(page).toHaveURL(/\/login\/staff/);
 
+    await showStep(page, 'Sign in and open the Sunshine staff dashboard');
     await signInStaff(page, password!);
+    await showStep(page, 'Sign in and open the Sunshine staff dashboard');
     await expect(page.getByRole('img', { name: 'Sunshine Logo' })).toBeVisible();
     await expect(page.getByText('Gatchibowli Main Center').first()).toBeVisible();
     await expect(page.getByText('Nanii Nani').first()).toBeVisible();
+    await capture(page, 'staff_dashboard');
+    await showStep(page, 'Log out and leave the staff workspace');
     await signOutStaff(page);
     await page.goto('/staff/dashboard');
     await expect(page).toHaveURL(/\/$/);
@@ -99,7 +159,7 @@ test.describe('Staff EMR on emr.whitecoats.com', () => {
   });
 
   test('WC-STF-E2E staff can register, book, reschedule, invoice, and take cash', async ({ page }) => {
-    test.setTimeout(12 * 60_000);
+    test.setTimeout(15 * 60_000);
     const dialogs: string[] = [];
     page.on('dialog', async (dialog) => {
       dialogs.push(dialog.message());
@@ -110,23 +170,27 @@ test.describe('Staff EMR on emr.whitecoats.com', () => {
     const phone = `9${stamp().slice(-9)}`;
     const emergencyPhone = `8${stamp().slice(-9)}`;
     const aadhar = `8${stamp().slice(-11)}`;
-const alphabet = 'ABCDEFGHIJ';
-  const nameSuffix = stamp().slice(-4).split('').map((digit) => alphabet[Number(digit)]).join('');
-  const firstName = 'Testchart';
-  const lastName = `Probe${nameSuffix}`;
+    const alphabet = 'ABCDEFGHIJ';
+    const nameSuffix = stamp().slice(-4).split('').map((digit) => alphabet[Number(digit)]).join('');
+    const firstName = 'Testchart';
+    const lastName = `Probe${nameSuffix}`;
     const patientName = `${firstName} ${lastName}`;
     const bookDate = isoDate(3);
     const rescheduleDate = isoDate(4);
 
     await test.step('Sign in as staff at Sunshine', async () => {
+      await showStep(page, 'Sign in as staff at Sunshine');
       await signInStaff(page, password!);
+      await showStep(page, 'Sign in as staff at Sunshine');
       await expect(page.getByRole('heading', { name: 'Quick Actions' })).toBeVisible();
       await expect(page.getByText('Today\'s Appointments Summary')).toBeVisible();
     });
 
     await test.step('Every staff page opens and is not a 404', async () => {
       for (const screen of screens) {
+        await showStep(page, `Open ${screen.path}`);
         await page.goto(screen.path);
+        await showStep(page, `Open ${screen.path}`);
         await expect(page).toHaveURL(new RegExp(`${screen.path.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?:$|\\?)`));
         await expect(page.getByText('404 - Page Not Found')).toHaveCount(0);
         await expect(page.getByRole('heading', { name: screen.heading }).first()).toBeVisible();
@@ -134,6 +198,7 @@ const alphabet = 'ABCDEFGHIJ';
     });
 
     await test.step('Profile, insurance, support, check-in, and list filters respond', async () => {
+      await showStep(page, 'Check profile, insurance, support, check-in, and list filters');
       await page.goto('/staff/profile');
       await expect(page.getByText(STAFF_EMAIL)).toBeVisible();
       await expect(page.getByText('Name, email, phone number, and Aadhaar details cannot be changed here.')).toBeVisible();
@@ -181,6 +246,7 @@ const alphabet = 'ABCDEFGHIJ';
     });
 
     await test.step('Register Patient rejects each invalid field, then saves a new chart', async () => {
+      await showStep(page, 'Register a patient and reject each invalid field');
       await page.goto('/staff/patients/new');
       await expect(page.getByText('Registering at Branch')).toBeVisible();
       await expect(page.getByText('Gatchibowli Main Center').first()).toBeVisible();
@@ -280,6 +346,7 @@ const alphabet = 'ABCDEFGHIJ';
     });
 
     await test.step('The new patient is searchable', async () => {
+      await showStep(page, 'Search for the new patient');
       await page.goto('/staff/patients/search');
       await page.getByPlaceholder('Enter name...').fill('1');
       await page.getByPlaceholder('Enter ID...').fill(`NO-SUCH-${id}`);
@@ -297,6 +364,7 @@ const alphabet = 'ABCDEFGHIJ';
     });
 
     await test.step('Book an in-person visit with the Kavya doctor', async () => {
+      await showStep(page, 'Book an in-person visit');
       await page.goto('/staff/appointments/new');
       await page.getByRole('button', { name: 'Next: Appointment Details' }).click();
       await expect.poll(() => dialogs.at(-1) || '').toContain('Please enter patient first name');
@@ -328,7 +396,7 @@ const alphabet = 'ABCDEFGHIJ';
       await expect(doctor).toBeVisible({ timeout: 20_000 });
       await doctor.click();
       await doctor.fill('Kavya');
-      const doctorChoice = page.getByText(/Kavya/i).last();
+      const doctorChoice = page.locator('body').getByText(/Kavya/i).last();
       await expect(doctorChoice).toBeVisible();
       const doctorLabel = (await doctorChoice.innerText()).replace(/\s+/g, ' ').trim();
       test.info().annotations.push({
@@ -372,6 +440,7 @@ const alphabet = 'ABCDEFGHIJ';
     });
 
     await test.step('Reschedule that visit to a later open slot', async () => {
+      await showStep(page, 'Reschedule the visit to a later open slot');
       await page.goto('/staff/appointments/reschedule');
       const row = page.getByRole('row', { name: new RegExp(phone) });
       await expect(row).toBeVisible({ timeout: 20_000 });
@@ -397,6 +466,7 @@ const alphabet = 'ABCDEFGHIJ';
     });
 
     await test.step('Create an invoice and collect it in cash', async () => {
+      await showStep(page, 'Create an invoice and collect it in cash');
       await page.goto('/staff/billing/new');
       const createInvoice = page.getByRole('button', { name: /Create Invoice \(₹/ });
       await expect(createInvoice).toBeDisabled();
@@ -438,6 +508,7 @@ const alphabet = 'ABCDEFGHIJ';
       await expect(page.getByText('Payment Successful!')).toBeVisible({ timeout: 20_000 });
       await expect(page.getByText(/paid via/i)).toBeVisible();
       await expect(page.getByText(/cash/i).first()).toBeVisible();
+      await capture(page, 'staff_cash_payment');
 
       const downloadButton = page.getByRole('button', { name: /Download Receipt/ }).or(page.getByRole('link', { name: /Download Receipt/ }));
       if (await downloadButton.count()) {
@@ -449,6 +520,7 @@ const alphabet = 'ABCDEFGHIJ';
     });
 
     await test.step('The booked visit and paid invoice show on the staff lists', async () => {
+      await showStep(page, 'Confirm the visit and the paid invoice on the staff lists');
       await page.goto('/staff/appointments');
       await expect(page.getByRole('heading', { name: 'All Appointments' }).first()).toBeVisible();
       const dates = page.locator('main input[type="date"]');
@@ -461,6 +533,7 @@ const alphabet = 'ABCDEFGHIJ';
       const visit = page.getByRole('row', { name: new RegExp(phone) });
       await expect(visit).toBeVisible({ timeout: 20_000 });
       await expect(visit).toContainText(/Kavyaa Allenki/);
+      await capture(page, 'staff_rescheduled_appointment');
 
       await page.goto('/staff/billing');
       await page.getByPlaceholder('Search by invoice number, patient name, or ID...').fill(lastName);
@@ -474,6 +547,7 @@ const alphabet = 'ABCDEFGHIJ';
     });
 
     await test.step('Logout closes the staff workspace', async () => {
+      await showStep(page, 'Log out and leave the staff workspace');
       await signOutStaff(page);
       await page.goto('/staff/patients/new');
       await expect(page).toHaveURL(/\/$/);

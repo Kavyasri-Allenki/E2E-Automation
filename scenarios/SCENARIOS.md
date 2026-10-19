@@ -525,7 +525,7 @@ Staff sign-in is WC-AUTH-03 plus WC-AUTH-10. After sign-in the menu includes Che
 
 ### WC-STF-E2E Staff workspace, registration, booking, reschedule, and cash invoice
 
-**Automated** when `WC_STAFF_PASSWORD` is set. `tests/auth/staff-emr.spec.ts`. Default account `kavyanaresh0903@gmail.com` at hospital Sunshine on `https://emr.whitecoats.com`. The run creates one adult test patient, one in-person visit, one reschedule, and one cash invoice. It does not enter a card, UPI id, or send a payment SMS.
+**Automated** when `WC_STAFF_PASSWORD` is set. `tests/auth/staff-emr.spec.ts`. Default account `kavyanaresh0903@gmail.com` at hospital Sunshine on `https://emr.whitecoats.com`. The run creates one adult test patient, one in-person visit, one reschedule, and one cash invoice. It records video at 1280×800 with each action slowed by 250 ms. It does not enter a card, UPI id, or send a payment SMS.
 
 - **Given** `/login/staff`
 - **When** the hospital search matches nothing
