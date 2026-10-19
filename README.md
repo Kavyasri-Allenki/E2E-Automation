@@ -67,6 +67,17 @@ WC_PATIENT_OTP='sms-code' \
   npx playwright test tests/auth/patient-video-booking.spec.ts --headed --retries=0
 ```
 
+## Staff EMR workflow
+
+`tests/auth/staff-emr.spec.ts` signs in on the EMR host, walks every staff screen, checks the fields on those screens, then registers one test patient, books Dr. Kavyaa Allenki (the Kavya doctor on the Sunshine directory), reschedules that visit, creates an invoice, and records a cash payment. `npm test` skips it unless `WC_STAFF_PASSWORD` is set. Point `WC_BASE_URL` at the host you are allowed to change.
+
+```bash
+WC_BASE_URL=https://emr.whitecoats.com \
+WC_STAFF_EMAIL='staff@example.com' \
+WC_STAFF_PASSWORD='your-password' \
+  npx playwright test tests/auth/staff-emr.spec.ts --retries=0
+```
+
 ## Sandbox scenarios
 
 Book, cancel, reschedule, check-in, billing, EMR, and lead flows are specified in the catalog. WC-PAT-VIDEO is the booking script that runs here, and it stops when Razorpay opens. Run the other flows only against a tenant created for testing, with accounts you own.

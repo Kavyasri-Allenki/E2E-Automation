@@ -523,6 +523,53 @@ Staff sign-in is WC-AUTH-03 plus WC-AUTH-10. After sign-in the menu includes Che
 - **Then** it drops off the active board
 - **Then** follow-ups due are listed at `/staff/appointments/follow-ups`
 
+### WC-STF-E2E Staff workspace, registration, booking, reschedule, and cash invoice
+
+**Automated** when `WC_STAFF_PASSWORD` is set. `tests/auth/staff-emr.spec.ts`. Default account `kavyanaresh0903@gmail.com` at hospital Sunshine on `https://emr.whitecoats.com`. The run creates one adult test patient, one in-person visit, one reschedule, and one cash invoice. It does not enter a card, UPI id, or send a payment SMS.
+
+- **Given** `/login/staff`
+- **When** the hospital search matches nothing
+- **Then** the page reads `No hospitals found matching "<query>".` and the email field stays hidden
+- **When** Sunshine is chosen
+- **Then** an empty email reads "Email is required", a bad email reads "Please enter a valid email address", and Sign In stays on the staff portal
+- **And** the password can be shown and hidden
+- **When** the password is wrong
+- **Then** the form shows invalid credentials
+- **When** the password is correct
+- **And** an existing session asks "Already Logged In"
+- **Then** "Yes, Logout & Continue" opens `/staff/dashboard`
+- **When** each staff screen is opened
+- **Then** Dashboard, Check-In, All Appointments, Today, Book Appointment, Reschedule, Cancel, Follow-ups, Patients, Register Patient, Search, Billing, Create Invoice, Pending Payments, Refunds, Insurance, Support Dashboard, Ticket Management, and My Profile each load their own screen
+- **And** none of those screens is the 404 page
+- **When** Register Patient is submitted empty
+- **Then** first name, last name, phone, and age are required
+- **When** age is under 1, over 150, or under 18 without a guardian
+- **Then** the form explains the age or guardian rule and does not save
+- **When** Aadhaar is not 12 digits, source is empty, or consent is missing
+- **Then** each field reports its own error
+- **When** the name, phone, and email formats are invalid
+- **Then** the form asks for letters only, a 2-character last name, a phone starting with 6–9, and an email that contains @
+- **When** the required fields are valid
+- **Then** the patient is saved and can be found from Search by that phone
+- **When** Book Appointment is continued without a patient
+- **Then** the form asks for the first name, last name, a valid phone, and a valid age
+- **When** the new patient, Cardiology, a future date, and Dr. Kavyaa Allenki are chosen
+- **Then** the directory has no doctor named Kavyasri, so the visit is booked with Dr. Kavyaa Allenki
+- **And** a referral checkbox without a referring doctor and hospital is rejected
+- **And** Pay on Visit confirms the visit without opening Razorpay or sending an SMS
+- **When** that visit is rescheduled
+- **Then** Confirm Reschedule stays disabled until a new date and an open slot are chosen
+- **And** the new slot replaces the old one
+- **When** Create Invoice is used without a patient or without a service line
+- **Then** the form explains what is missing
+- **When** a ₹1 consultation line is saved and Pay is used
+- **Then** Process Payment records Cash and reads "Payment Successful!"
+- **When** All Appointments is still on its default today-through-tomorrow range
+- **Then** the future visit is hidden until that range is set to the rescheduled day and the phone is searched
+- **And** Billing search by the patient surname shows the invoice as paid
+- **When** Logout is confirmed
+- **Then** `/staff/patients/new` returns to the marketing home
+
 ### WC-STF-04 Vitals and billing
 
 **Sandbox.**
