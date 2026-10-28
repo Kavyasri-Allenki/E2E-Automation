@@ -570,6 +570,24 @@ Staff sign-in is WC-AUTH-03 plus WC-AUTH-10. After sign-in the menu includes Che
 - **When** Logout is confirmed
 - **Then** `/staff/patients/new` returns to the marketing home
 
+### WC-STF-RAMYA Book Ramya Amirishetti with Dr. Kavyaa Allenki
+
+**Automated** when `WC_STAFF_PASSWORD` is set. Page objects live in `tests/pages` and the spec is `tests/staff/ramya-appointment.spec.ts`. Hospital Sunshine on `https://emr.whitecoats.com`. The positive path creates one in-person visit for the existing patient Ramya Amirishetti and leaves it pay-on-visit. It does not enter a card, UPI id, or send a payment SMS.
+
+- **When** Book Appointment continues without a patient
+- **Then** the form asks for a first name, a last name, a phone that starts with 6–9, and an age from 1 to 150
+- **When** Ramya Amirishetti is selected and no department, doctor, or slot is chosen
+- **Then** Next: Review stays disabled
+- **When** an unknown coupon is applied
+- **Then** the form reports that the coupon is not valid
+- **When** the referral checkbox is set without a referring doctor and hospital
+- **Then** review is rejected
+- **When** Cardiology, a future date, Dr. Kavyaa Allenki, and an open slot are confirmed with Pay on Visit
+- **Then** the visit is booked
+- **And** All Appointments shows that patient, doctor, and time on the booked day
+- **And** Billing & Invoices shows an unpaid invoice for that visit
+- **And** Pending Payments shows the same unpaid visit
+
 ### WC-STF-04 Vitals and billing
 
 **Sandbox.**

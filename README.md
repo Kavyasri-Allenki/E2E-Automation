@@ -73,6 +73,15 @@ WC_PATIENT_OTP='sms-code' \
 
 The spec records video, uses a 1280×800 window, and slows each action by 250 ms. `--headed` needs a display.
 
+`tests/staff/ramya-appointment.spec.ts` uses page objects under `tests/pages`. It signs in as staff, rejects an incomplete booking for Ramya Amirishetti, then books her with Dr. Kavyaa Allenki and checks All Appointments, Billing & Invoices, and Pending Payments. It also records video and slows each action.
+
+```bash
+WC_BASE_URL=https://emr.whitecoats.com \
+WC_STAFF_EMAIL='staff@example.com' \
+WC_STAFF_PASSWORD='your-password' \
+  npx playwright test tests/staff/ramya-appointment.spec.ts --headed --retries=0 --workers=1
+```
+
 ```bash
 WC_BASE_URL=https://emr.whitecoats.com \
 WC_STAFF_EMAIL='staff@example.com' \
